@@ -1,0 +1,348 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d316ae63-d211-48fb-aa98-a642f9bcbb17",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5pFTnGVI47Xl0dlX",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "926324c9-a2b2-4388-a115-d60bde0d60ef",
+              "name": "Subject",
+              "value": "={{ $json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "fc3c7c5e-124f-4bb2-9671-ebe88f66d1f3",
+              "name": "From",
+              "value": "={{ $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "eeaff427-b576-49ad-98da-b679e5f2e08f",
+              "name": "To",
+              "value": "={{ $json.To }}",
+              "type": "string"
+            },
+            {
+              "id": "2ef9e42e-be73-4b7b-8606-e737a0eaf4b3",
+              "name": "snippet",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "54397666-5e08-4ddb-b00a-730cabe1add8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an email classifier for an academic instructor named XYZ.\nClassify the email into ONLY one of the following labels:\n\n1. Lab_Query\n2. Departmental_Meeting\n3. Ignored\nRules:\n- Lab_Query: student asking about lab work, submissions, issues, marks, deadlines\n- Departmental_Meeting: emails about meetings, schedules, departmental matters, urgent discussions\n- Ignored: anything else\nReturn ONLY one word exactly from:\nLab_Query\nDepartmental_Meeting\nIgnored\n {{ $json.Subject }}\n{{ $json.snippet }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "d7804788-8ced-4d93-9eb3-88486891d4eb",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "iwIkFApqwKeijGjX",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cd6c12f9-c156-4cba-b68d-c698e16a9c35",
+              "leftValue": "={{ $json[\"output\"][0][\"content\"][0][\"text\"] }}",
+              "rightValue": "Lab_Query",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        768,
+        0
+      ],
+      "id": "605ccca1-b002-43dd-989c-6809d4973893",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "47fe169d-bfe7-4d4d-8a71-42db77a637ac",
+              "leftValue": "={{ $json[\"output\"][0][\"content\"][0][\"text\"] }}",
+              "rightValue": "Departmental_Meeting",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        208
+      ],
+      "id": "746df60e-695c-40ce-82d3-bc69b1a9acca",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an assistant of XYZ, Instructor.\nWrite a professional draft email asking the student to provide:\n- Registration Number\n- Section\n- Course / Subject Code\n- Clear description of the lab issue\nTone: polite, professional, clear.\npersist the output as a Gmail draft only (no auto-send)."
+            },
+            {
+              "content": "=Subject: {{$json[\"Subject\"]}}\n\nBody:\n{{$json[\"body\"]}}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        -160
+      ],
+      "id": "4351715e-f842-4dab-b329-27680560a2f6",
+      "name": "Generate Lab Draft",
+      "credentials": {
+        "openAiApi": {
+          "id": "iwIkFApqwKeijGjX",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "Lab Query - Missing Details",
+        "message": "={{$node[\"Generate Lab Draft\"].json[\"output\"][0][\"content\"][0][\"text\"]}}\n",
+        "options": {
+          "threadId": "={{$node[\"Gmail Trigger\"].json[\"threadId\"]}}",
+          "sendTo": "={{$node[\"Gmail Trigger\"].json[\"From\"]}}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        -160
+      ],
+      "id": "8d8ca755-fb8b-44b7-9679-2d731a9b2287",
+      "name": "Create Lab Draft",
+      "webhookId": "7a88832e-e554-4fe2-9e9d-a3c406d610d3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5pFTnGVI47Xl0dlX",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{$node[\"Gmail Trigger\"].json[\"id\"]}}",
+        "labelIds": [
+          "IMPORTANT"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        192
+      ],
+      "id": "64276076-8461-4229-ae67-ef64d801cbf0",
+      "name": "Mark High Priority",
+      "webhookId": "abeca922-5980-46c6-aca8-34d67462ecc7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5pFTnGVI47Xl0dlX",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Generate Lab Draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Lab Draft": {
+      "main": [
+        [
+          {
+            "node": "Create Lab Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Mark High Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8bda3e97-41ba-4338-b32c-5ef83b37833d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "74657b17a34f64ba7dcb076ebd4c53f8f57ac0ae4d85dc58bc1170e6c4313509"
+  },
+  "id": "AvsUdMcJI1m1inlc7VcuD",
+  "tags": []
+}
